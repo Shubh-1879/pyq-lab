@@ -1,10 +1,11 @@
 // PYQ Lab sync backend. Paste into Extensions > Apps Script of a new Google Sheet.
 // 1) Change KEY below to any secret word.  2) Deploy > New deployment > Web app,
 //    Execute as: Me, Who has access: Anyone.  3) Copy the web app URL into the app's Sync settings.
-// Tabs: "attempts" (every answer you give) and "questions" (questions you add).
+// Tabs: "attempts" (every answer you give), "questions" (questions you add), "keyfixes" (answer-key corrections).
 // You can also type questions straight into the "questions" tab: fill exam..remember, leave id and json blank.
 const KEY = 'CHANGE_ME';
 const ACOLS = ['id','date','subject','topic','year','qno','result','chosen','conf','eliminated','elimBad','reason','note','sec','source','json'];
+const FCOLS = ['id','date','answer','note','json'];
 const QCOLS = ['id','exam','source','subject','topic','year','question','a','b','c','d','answer','explanation','remember','json'];
 
 function sheet_(name, cols) {
@@ -32,7 +33,9 @@ function doGet(e) {
       year: Number(g('year')) || null, question: String(g('question')), options: [g('a'), g('b'), g('c'), g('d')].map(String),
       answer: ans, summary: g('explanation') || '', keyfact: g('remember') || '', mode: 'text'});
   });
-  return out_({ok:true, attempts, questions});
+  const fixes = [];
+  rows_(sheet_('keyfixes', FCOLS)).forEach(r => { try { fixes.push(JSON.parse(r[FCOLS.indexOf('json')])); } catch (err) {} });
+  return out_({ok:true, attempts, questions, fixes});
 }
 
 function doPost(e) {
@@ -59,6 +62,12 @@ function doPost(e) {
         o[0] || '', o[1] || '', o[2] || '', o[3] || '', q.answer == null ? '' : 'abcd'[q.answer], q.summary || '', q.keyfact || '', JSON.stringify(q)]);
     });
     if (qrows.length) qsh.getRange(qsh.getLastRow() + 1, 1, qrows.length, QCOLS.length).setValues(qrows);
-    return out_({ok:true, added: arows.length, addedQuestions: qrows.length});
+    const fsh = sheet_('keyfixes', FCOLS), frows = [];
+    (body.fixes || []).forEach(f => {
+      if (!f || !f.id) return;
+      frows.push([f.id, new Date(f.ts || Date.now()), f.undo ? 'UNDO (official key)' : (f.answer == null ? 'dropped' : 'abcd'[f.answer]), f.note || '', JSON.stringify(f)]);
+    });
+    if (frows.length) fsh.getRange(fsh.getLastRow() + 1, 1, frows.length, FCOLS.length).setValues(frows);
+    return out_({ok:true, added: arows.length, addedQuestions: qrows.length, addedFixes: frows.length});
   } finally { lock.releaseLock(); }
 }
