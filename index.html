@@ -1,5 +1,6 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Prelims PYQ Lab</title><link rel="manifest" href="manifest.json"><meta name="theme-color" content="#2f5d50"><link rel="icon" href="icon-192.png"><link rel="apple-touch-icon" href="icon-192.png"></head><body><script>
 (function(){
+const APPV="16 Nov 16:57";
 const K="pyq_attempts",P="pyq_pending",CQ="pyq_custom",CP="pyq_cpending",KF="pyq_keyfix",KP="pyq_kpending",C="pyq_sync";const subs={attempts:[],custom:[],keyfix:[]};
 const get=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))??d}catch(e){return d}},put=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
 const store={attempts:[K,P],custom:[CQ,CP],keyfix:[KF,KP]};
@@ -19,7 +20,7 @@ async function pull(){const cfg=get(C,null);if(!cfg)return;try{const r=await fet
  merge("attempts",j.attempts);merge("custom",j.questions);merge("keyfix",j.fixes);status("Synced "+new Date().toLocaleTimeString())}catch(e){status("Can't reach sync — working offline")}}
 window.addEventListener("online",push);setInterval(push,60000);
 document.addEventListener("DOMContentLoaded",()=>{const bar=document.createElement("div");bar.style.cssText="max-width:760px;margin:0 auto;padding:8px 16px 0;font:13px system-ui;color:var(--mute);display:flex;gap:8px;align-items:center;flex-wrap:wrap";
- bar.innerHTML='<span id="syncst">'+(get(C,null)?"Connecting…":"Sync not set up")+'</span><button id="syncset" style="font:inherit;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:6px;padding:2px 8px;cursor:pointer">Sync settings</button><span id="syncform" hidden><input id="surl" placeholder="Apps Script web app URL" style="width:260px;font:inherit"> <input id="skey" placeholder="secret key" style="width:120px;font:inherit"> <button id="ssave" style="font:inherit">Save</button></span>';
+ bar.innerHTML='<span id="syncst">'+(get(C,null)?"Connecting…":"Sync not set up")+'</span><span style="opacity:.6">· app '+APPV+'</span><button id="syncset" style="font:inherit;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:6px;padding:2px 8px;cursor:pointer">Sync settings</button><span id="syncform" hidden><input id="surl" placeholder="Apps Script web app URL" style="width:260px;font:inherit"> <input id="skey" placeholder="secret key" style="width:120px;font:inherit"> <button id="ssave" style="font:inherit">Save</button></span>';
  document.body.prepend(bar);const cfg=get(C,{});document.getElementById("surl").value=cfg.url||"";document.getElementById("skey").value=cfg.key||"";
  document.getElementById("syncset").onclick=()=>{const f=document.getElementById("syncform");f.hidden=!f.hidden};
  document.getElementById("ssave").onclick=()=>{const url=document.getElementById("surl").value.trim(),key=document.getElementById("skey").value.trim();if(!url||!key)return;put(C,{url,key});document.getElementById("syncform").hidden=true;status("Connecting…");push()};
