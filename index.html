@@ -1,0 +1,263 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Prelims PYQ Lab</title><link rel="manifest" href="manifest.json"><meta name="theme-color" content="#2f5d50"><link rel="icon" href="icon-192.png"><link rel="apple-touch-icon" href="icon-192.png"></head><body><script>
+(function(){
+const K="pyq_attempts",P="pyq_pending",CQ="pyq_custom",CP="pyq_cpending",C="pyq_sync";const subs={attempts:[],custom:[]};
+const get=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))??d}catch(e){return d}},put=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
+const store={attempts:[K,P],custom:[CQ,CP]};
+function emit(c){const a=get(store[c][0],{});subs[c].forEach(cb=>cb({docs:Object.entries(a).map(([id,v])=>({id,data:()=>v}))}))}
+let BANK=null;const bankP=fetch("bank.json").then(r=>r.json()).then(b=>BANK=b);
+const db={collection:c=>({onSnapshot:cb=>{if(c=="bank")bankP.then(b=>cb({docs:[{id:"all",data:()=>({items:b})}]}));else if(store[c]){subs[c].push(cb);setTimeout(()=>emit(c),0)}else setTimeout(()=>cb({docs:[]}),0);return()=>{}},
+ doc:id=>({set:async v=>{if(!store[c])return;const [k,pk]=store[c];const a=get(k,{});a[id]=v;put(k,a);const p=get(pk,[]);p.push({id,...v});put(pk,p);emit(c);push()},update:async()=>{}})})};
+window.__importAttempts=list=>{const a=get(K,{}),p=get(P,[]);list.forEach(v=>{const id=v.ts+"-imp"+(v.qid||"");a[id]=v;p.push({id,...v})});put(K,a);put(P,p);emit("attempts");push()};
+window.claude={use:async n=>n=="db"?db:n=="user"?{id:async()=>"me"}:null};
+// ---- sync with Google Sheet (Apps Script)
+let busy=false;function status(t){const e=document.getElementById("syncst");if(e)e.textContent=t}
+async function push(){const cfg=get(C,null);if(!cfg||busy)return;const p=get(P,[]),q=get(CP,[]);if(!p.length&&!q.length)return pull();busy=true;
+ try{const r=await fetch(cfg.url,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({key:cfg.key,attempts:p,questions:q})});const j=await r.json();if(!j.ok)throw j.error;
+  put(P,get(P,[]).slice(p.length));put(CP,get(CP,[]).slice(q.length));status("Synced "+new Date().toLocaleTimeString())}catch(e){status("Offline — "+(get(P,[]).length+get(CP,[]).length)+" waiting to sync")}busy=false;pull()}
+function merge(c,list){const k=store[c][0],a=get(k,{});let n=0;(list||[]).forEach(v=>{if(v&&v.id&&!a[v.id]){const {id,...rest}=v;a[id]=rest;n++}});if(n){put(k,a);emit(c)}}
+async function pull(){const cfg=get(C,null);if(!cfg)return;try{const r=await fetch(cfg.url+"?key="+encodeURIComponent(cfg.key));const j=await r.json();if(!j.ok)throw j.error;
+ merge("attempts",j.attempts);merge("custom",j.questions);status("Synced "+new Date().toLocaleTimeString())}catch(e){status("Can't reach sync — working offline")}}
+window.addEventListener("online",push);setInterval(push,60000);
+document.addEventListener("DOMContentLoaded",()=>{const bar=document.createElement("div");bar.style.cssText="max-width:760px;margin:0 auto;padding:8px 16px 0;font:13px system-ui;color:var(--mute);display:flex;gap:8px;align-items:center;flex-wrap:wrap";
+ bar.innerHTML='<span id="syncst">'+(get(C,null)?"Connecting…":"Sync not set up")+'</span><button id="syncset" style="font:inherit;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:6px;padding:2px 8px;cursor:pointer">Sync settings</button><span id="syncform" hidden><input id="surl" placeholder="Apps Script web app URL" style="width:260px;font:inherit"> <input id="skey" placeholder="secret key" style="width:120px;font:inherit"> <button id="ssave" style="font:inherit">Save</button></span>';
+ document.body.prepend(bar);const cfg=get(C,{});document.getElementById("surl").value=cfg.url||"";document.getElementById("skey").value=cfg.key||"";
+ document.getElementById("syncset").onclick=()=>{const f=document.getElementById("syncform");f.hidden=!f.hidden};
+ document.getElementById("ssave").onclick=()=>{const url=document.getElementById("surl").value.trim(),key=document.getElementById("skey").value.trim();if(!url||!key)return;put(C,{url,key});document.getElementById("syncform").hidden=true;status("Connecting…");push()};
+ push()});
+if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));
+})();
+</script><title>Prelims PYQ Lab</title>
+<style>
+:root{--bg:#f7f6f2;--card:#fff;--ink:#1d1d1b;--mute:#6b6a64;--line:#e3e1da;--acc:#2f5d50;--ok:#2e7d4f;--bad:#b3412f;--mid:#b07d1a}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#151614;--card:#1f201d;--ink:#ecebe6;--mute:#9a998f;--line:#33342f;--acc:#7fb8a5;--ok:#6cc08f;--bad:#e2806e;--mid:#d9a94a}}
+:root[data-theme="dark"]{--bg:#151614;--card:#1f201d;--ink:#ecebe6;--mute:#9a998f;--line:#33342f;--acc:#7fb8a5;--ok:#6cc08f;--bad:#e2806e;--mid:#d9a94a}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,Segoe UI,sans-serif}
+main{max-width:760px;margin:0 auto;padding:16px}
+h1{font-size:20px;margin:4px 0 12px}h2{font-size:16px;margin:16px 0 8px}
+nav{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+nav button,.btn{border:1px solid var(--line);background:var(--card);color:var(--ink);padding:8px 12px;border-radius:8px;cursor:pointer;font:inherit}
+nav button.on,.btn.pri{background:var(--acc);color:var(--bg);border-color:var(--acc)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px}
+.orow{display:flex;gap:6px;align-items:stretch}.orow .opt{flex:1}.xb{border:1px solid var(--line);background:var(--card);color:var(--mute);border-radius:8px;margin:6px 0;padding:0 12px;cursor:pointer;font:inherit}.struck{text-decoration:line-through;opacity:.45}.xb.on{background:var(--bad);color:var(--bg);border-color:var(--bad)}.mgrid{display:grid;grid-template-columns:repeat(10,1fr);gap:4px}.mgrid button{padding:6px 0;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink);font:inherit;font-size:12px;cursor:pointer}.mgrid .ans{background:var(--acc);color:var(--bg)}.mgrid .fl{outline:2px solid var(--mid)}.mgrid .cu{border-color:var(--ink);border-width:2px}
+.opt{display:block;width:100%;text-align:left;margin:6px 0;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit;cursor:pointer}
+.opt img{max-width:100%}.opt.ok{border-color:var(--ok);background:color-mix(in srgb,var(--ok) 14%,var(--bg))}.opt.bad{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 14%,var(--bg))}
+select,input,textarea{font:inherit;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);width:100%}
+.row{display:flex;gap:8px;flex-wrap:wrap}.row>*{flex:1;min-width:130px}
+.mute{color:var(--mute);font-size:13px}.chips{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.chip{padding:5px 10px;border:1px solid var(--line);border-radius:99px;background:var(--bg);color:var(--ink);cursor:pointer;font:inherit;font-size:13px}.chip.on{background:var(--acc);color:var(--bg)}
+table{width:100%;border-collapse:collapse;font-size:14px}td,th{padding:6px;border-bottom:1px solid var(--line);text-align:left}
+.bar{height:8px;background:var(--line);border-radius:4px;overflow:hidden}.bar i{display:block;height:100%;background:var(--acc)}
+.big{font-size:26px;font-weight:600}.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px}
+.hid{display:none}pre{white-space:pre-wrap;font:inherit;margin:0}
+</style>
+<main>
+<h1>Prelims PYQ Lab</h1>
+<div id="status" class="mute">Connecting…</div>
+<nav id="nav"></nav>
+<section id="v-practice"></section>
+<section id="v-log" class="hid"></section>
+<section id="v-review" class="hid"></section>
+<section id="v-mock" class="hid"></section>
+<section id="v-add" class="hid"></section>
+<section id="v-dash" class="hid"></section>
+<section id="v-guide" class="hid"></section>
+</main>
+<script>
+const SUBJ={Economy:["Macroeconomy","Budgeting","Taxation","RBI functions","RBI & Banking","Capital/Money Market & FDI","Industries","International Trade","Intl Economic Orgs","Population","Poverty, Health & Education","Employment","Agriculture","Institutions, Laws & Policies","Five-Year Plans"],Environment:["Ecology & Ecosystems","Biodiversity & Protected Areas","Species","Climate Change","Pollution","Conventions & Bodies","Environment Laws"],Polity:["Constitution & Preamble","Fundamental Rights/DPSP/Duties","Parliament","Executive","Judiciary","Federalism & Local Govt","Constitutional Bodies","Statutory Bodies","Elections","Amendments & Schedules"],Geography:["Physical","Climatology","Oceanography","Indian Geography","World Geography","Agriculture & Resources","Maps & Places"],"Science & Tech":["Biology & Health","Space","Defence","IT & Computers","Biotech","Physics/Chemistry basics","Energy"],"Current Affairs":["Schemes","International Relations","Reports & Indices","Misc"],"Modern History":["1757–1857","1857–1905","1905–1920","1920–1947","Reformers & Organisations","Acts & Policies"],"Ancient History":["Prehistoric & IVC","Vedic","Buddhism & Jainism","Mauryas & Post-Maurya","Guptas & Later","South India"],"Art & Culture":["Architecture","Painting","Music & Dance","Literature & Philosophy","Festivals & Misc"],"Medieval History":["Delhi Sultanate","Mughals","Bhakti & Sufi","Vijayanagara & Others"]};
+const REASONS=["Didn't know","Concept gap","Elimination error","Misread statement","Silly / rushed","Overthought","Guessed right"];
+let CORE=[],CUSTOM=[],expl={},db=null,sm=null,uid=null,bank=[],att=[],cur=null,t0=0,dl=null;
+const $=s=>document.querySelector(s),esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const views=[["practice","Practice"],["log","Log offline"],["review","Review ✗"],["mock","Mock test"],["add","Add questions"],["dash","Dashboard"],["guide","Guideline"]];
+$("#nav").innerHTML=views.map(([k,l],i)=>`<button data-v="${k}" class="${i?'':'on'}">${l}</button>`).join("");
+$("#nav").onclick=e=>{const v=e.target.dataset.v;if(!v)return;document.querySelectorAll("#nav button").forEach(b=>b.classList.toggle("on",b.dataset.v==v));views.forEach(([k])=>$("#v-"+k).classList.toggle("hid",k!=v));render(v)};
+const EX=q=>q.exam||"UPSC Prelims";
+function exams(){return [...new Set(["UPSC Prelims",...bank.map(EX)])]}
+function subjectsOf(e){const set=new Set(bank.filter(q=>!e||EX(q)==e).map(q=>q.subject));const order=Object.keys(SUBJ).filter(x=>set.has(x));return order.concat([...set].filter(x=>!order.includes(x)).sort())}
+function topicsOf(e,s){const set=new Set(bank.filter(q=>(!e||EX(q)==e)&&q.subject==s).map(q=>q.topic));const base=(SUBJ[s]||[]).filter(t=>set.has(t));return base.concat([...set].filter(t=>t&&!base.includes(t)).sort())}
+function subjSel(id,all){return `<select id="${id}">${all?'<option value="">All subjects</option>':''}${Object.keys(SUBJ).map(s=>`<option>${s}</option>`).join("")}</select>`}
+function topicOpts(s,all){return (all?'<option value="">All topics</option>':'')+(SUBJ[s]||[]).map(t=>`<option>${esc(t)}</option>`).join("")}
+function attemptsFor(qid){return att.filter(a=>a.qid==qid)}
+// ---------- Practice
+function renderPractice(){
+ const el=$("#v-practice");
+ if(!el.dataset.init){el.dataset.init=1;el.innerHTML=`<div class="card"><div class="row"><select id="pe"></select></div><div class="row" style="margin-top:8px"><select id="ps"></select><select id="pt"><option value="">All topics</option></select><select id="pm"><option value="new">Unattempted first</option><option value="all">Any</option><option value="wrong">Only my ✗</option></select></div><div class="row" style="margin-top:8px"><button class="btn pri" id="pgo">Next question</button></div><div id="pinfo" class="mute" style="margin-top:6px"></div></div><div id="pq"></div>`;
+  const fillS=()=>{$("#ps").innerHTML='<option value="">All subjects</option>'+subjectsOf($("#pe").value).map(x=>`<option>${esc(x)}</option>`).join("");$("#pt").innerHTML='<option value="">All topics</option>';info()};
+  $("#pe").onchange=fillS;$("#ps").onchange=()=>{$("#pt").innerHTML='<option value="">All topics</option>'+topicsOf($("#pe").value,$("#ps").value).map(t=>`<option>${esc(t)}</option>`).join("");info()};$("#pt").onchange=info;$("#pgo").onclick=nextQ}
+ const pe=$("#pe");if(pe){const ex=exams(),v=pe.value;if(pe.options.length!=ex.length){pe.innerHTML=ex.map(x=>`<option>${esc(x)}</option>`).join("");pe.value=ex.includes(v)?v:ex[0];pe.onchange&&pe.onchange()}}
+ info();
+}
+function pool(){const e=$("#pe").value,s=$("#ps").value,t=$("#pt").value,m=$("#pm").value;let p=bank.filter(q=>EX(q)==e&&(!s||q.subject==s)&&(!t||q.topic==t));
+ if(m=="wrong")p=p.filter(q=>{const a=attemptsFor(q.id);return a.length&&a[a.length-1].result!="right"});
+ if(m=="new"){const n=p.filter(q=>!attemptsFor(q.id).length);if(n.length)p=n}return p}
+function info(){$("#pinfo").textContent=bank.length?`${pool().length} questions in this filter · ${bank.length} in bank`:"Question bank is empty — Claude loads it from your UPSC papers. Use “Log offline” meanwhile."}
+const CONF=["Sure","50:50","Guess"];let ELIM=new Set(),CONFV="";
+function nextQ(){const p=pool();if(!p.length){$("#pq").innerHTML='<div class="card mute">Nothing here. Change the filter.</div>';return}
+ cur=p[Math.floor(Math.random()*p.length)];t0=Date.now();const L="abcd";
+ $("#pq").innerHTML=`<div class="card"><div class="mute">${esc(cur.subject)} › ${esc(cur.topic)} · ${cur.custom?esc((cur.source||EX(cur))+(cur.year&&!String(cur.source||"").includes(cur.year)?" "+cur.year:"")):"UPSC "+esc(cur.year)+" Q"+esc(cur.qno)+' · <span title="Text was OCR\'d from the scanned paper">scan text</span>'}</div>${cur.mode=="image"?`${cur.note?`<div class="mute"><b>${esc(cur.note)}</b></div>`:''}<canvas class="qc" role="img" aria-label="Question ${esc(cur.qno)} from the paper" style="width:100%;border:1px solid var(--line);border-radius:8px;background:#fff;margin:8px 0"></canvas>`:`<pre style="margin:8px 0">${esc(cur.question)}</pre>`}<div class="mute">Strike out what you can eliminate (✕), mark your confidence, then answer.</div>${(cur.options||["","","",""]).map((o,i)=>`<div class="orow"><button class="opt" data-i="${i}">(${L[i]}) ${cur.mode=="image"?"":esc(o)}</button><button class="xb" data-x="${i}" aria-label="Eliminate option ${L[i]}">✕</button></div>`).join("")}<div class="chips" id="conf"><span class="mute" style="align-self:center">Confidence:</span>${CONF.map(c=>`<button class="chip" data-c="${c}">${c}</button>`).join("")}</div>${cur.mode!="image"?`<details class="mute"><summary>View original scan</summary><canvas class="qc" style="width:100%;background:#fff;border-radius:8px"></canvas></details>`:""}${cur.unofficial?'<div class="mute">Answer key: unofficial (UPSC key not yet released).</div>':''}<div class="row" style="margin-top:6px"><button class="btn" id="pskip">Skip (would leave blank)</button></div><div id="pres"></div></div>`;
+ ELIM=new Set();CONFV="";drawQ(cur);$("#pq").querySelectorAll(".opt").forEach(b=>b.onclick=()=>answer(+b.dataset.i));
+ $("#pq").querySelectorAll(".xb").forEach(b=>b.onclick=()=>{const k=+b.dataset.x;ELIM.has(k)?ELIM.delete(k):ELIM.add(k);b.classList.toggle("on",ELIM.has(k));$(`#pq .opt[data-i="${k}"]`).classList.toggle("struck",ELIM.has(k))});
+ $("#conf").onclick=e=>{const c=e.target.dataset.c;if(!c)return;CONFV=c;$("#conf").querySelectorAll(".chip").forEach(x=>x.classList.toggle("on",x==e.target))};$("#pskip").onclick=()=>answer(-1)}
+const SPR={};function sprite(n){return SPR[n]||(SPR[n]=new Promise((ok,no)=>{const i=new Image();i.onload=()=>ok(i);i.onerror=no;i.src="s/"+n}))}
+async function drawQ(q,sel="#pq"){if(!q.img)return;const [n,y,w,h]=q.img;try{const im=await sprite(n);document.querySelectorAll(sel+" canvas.qc").forEach(c=>{c.width=w;c.height=h;c.getContext("2d").drawImage(im,0,y,w,h,0,0,w,h)})}catch(e){}}
+function qBlob(){const c=document.querySelector("#pq canvas.qc");return c?new Promise(r=>c.toBlob(r,"image/jpeg",0.8)):null}
+function mergeExpl(){bank.forEach(q=>{if(expl[q.id])Object.assign(q,expl[q.id])})}
+function exHtml(q){if(!q.summary&&!q.explanation)return sm?'<button class="btn" id="exbtn">Explain this question</button> <span class="mute">Generates a detailed explanation once and saves it.</span>':'<p class="mute">No explanation saved yet for this question.</p>';
+ const ex=q.explanations||[],st=q.statements||[];
+ return `${q.dropped?`<p><b>Dropped by UPSC.</b> Most defensible answer: <b>(${esc(q.likely||"?")})</b>. ${esc(q.why_dropped||"")}</p>`:''}<p><b>Summary:</b> ${esc(q.summary||q.explanation)}</p>${q.detail?`<p>${esc(q.detail)}</p>`:''}${st.length?'<p><b>Statements</b></p><ul>'+st.map(e=>`<li>${esc(e)}</li>`).join("")+'</ul>':''}${ex.length?'<p><b>Options</b></p><ul>'+ex.map((e,k)=>`<li><b>(${"abcd"[k]})</b> ${esc(e)}</li>`).join("")+'</ul>':''}${q.keyfact?`<p><b>Remember:</b> ${esc(q.keyfact)}</p>`:''}`}
+async function qImageBlob(q){if(!q.img)return null;const [n,y,w,h]=q.img;const im=await sprite(n);const c=document.createElement("canvas");c.width=w;c.height=h;c.getContext("2d").drawImage(im,0,y,w,h,0,0,w,h);return new Promise(r=>c.toBlob(r,"image/jpeg",0.8))}
+const GEN={on:false,async start(){this.on=true;const b=$("#genall");if(b)b.textContent="Stop";let wait=0;
+ while(this.on){const q=bank.find(x=>!(x.summary||x.explanation));if(!q){msg("All done.");break}
+  try{msg(`Writing ${q.year} Q${q.qno}…`);await genExpl(q);wait=0;const c=$("#excount");if(c)c.textContent=bank.filter(x=>x.summary||x.explanation).length}
+  catch(e){if(e&&e.code=="not_granted"){msg("Claude access not granted.");break}wait=Math.min((wait||30)*2,600);msg(`Claude is busy — retrying in ${Math.round(wait/60)||1} min…`);await new Promise(r=>setTimeout(r,wait*1000))}}
+ this.on=false;const b2=$("#genall");if(b2)b2.textContent="Generate all missing"},stop(){this.on=false;msg("Stopping after the current question.")}};
+function msg(t){const m=$("#genmsg");if(m)m.textContent=t}
+const FIELDS=["summary","detail","statements","explanations","keyfact","likely","why_dropped"];
+async function genExpl(q){let imgs=null;if(q.mode=="image"){const lim=await sm.limits().catch(()=>null);if(lim&&lim.images){const bl=await qImageBlob(q).catch(()=>null);if(bl)imgs=[bl]}}
+ const qtext=q.mode=="image"?(imgs?"(The question is in the attached image of the original paper. If the image shows two questions, explain only Q"+q.qno+".)":"(Question text unavailable.)"):`${q.question}\n(a) ${q.options[0]}\n(b) ${q.options[1]}\n(c) ${q.options[2]}\n(d) ${q.options[3]}`;
+ const keyline=q.custom?`The answer key provided is (${"abcd"[q.answer]}). Treat it as correct unless it is clearly wrong; if so, say so in "summary".`:q.dropped?"UPSC DROPPED this question (not scored). Work out the most defensible answer, put its letter in \"likely\", and say in \"why_dropped\" why UPSC probably dropped it (ambiguity, error, outdated fact).":q.unofficial?`An UNOFFICIAL expected answer is (${"abcd"[q.answer]}). Verify it; if you are confident it is wrong, say so in "summary".`:`The OFFICIAL UPSC answer is (${"abcd"[q.answer]}); treat it as correct.`;
+ const r=await sm.json(`You are an expert UPSC prelims mentor writing a permanent revision note. The question was OCR'd from the official paper; fix obvious OCR typos silently. ${keyline}
+Return JSON only with these keys:
+"summary": 2-3 sentences — the answer and the core reason.
+"detail": a detailed paragraph (120-200 words) teaching the underlying concept, with the facts, dates, articles, bodies or data a student must know, and the elimination logic.
+"statements": for statement/pair-based questions, one entry per numbered statement or pair: "1 — Correct/Incorrect: reason"; otherwise [].
+"explanations": exactly 4 strings, why each of (a)-(d) is right or wrong.
+"keyfact": one line to memorise.
+${q.dropped?'"likely": one letter a-d, "why_dropped": one or two sentences.':''}
+
+Question (${q.custom?esc((q.source||EX(q))):"UPSC "+q.year+" Q"+q.qno}):
+${qtext}`,imgs?{modelTier:"default",images:imgs}:{modelTier:"default"});
+ const d={};FIELDS.forEach(k=>{if(r[k]!=null)d[k]=r[k]});d.at=Date.now();
+ Object.assign(q,d);expl[q.id]=d;try{await db.collection("expl").doc(q.id).set(d)}catch(e){}return d}
+async function explain(q){const b=$("#exbtn");if(b){b.disabled=true;b.textContent="Writing a detailed explanation…"}
+ try{await genExpl(q);if(cur===q)$("#exbox").innerHTML=exHtml(q)}catch(e){if(b){b.disabled=false;b.textContent=e&&e.code=="rate_limited"?"Busy — try again in a minute":"Explain this question"}}}
+function answer(i){const sec=Math.round((Date.now()-t0)/1000),dropped=cur.answer==null,ok=!dropped&&i==cur.answer;
+ $("#pq").querySelectorAll(".xb,#conf .chip").forEach(b=>b.disabled=true);const elim=[...ELIM],conf=CONFV,elimBad=!dropped&&elim.includes(cur.answer);
+ $("#pq").querySelectorAll(".opt").forEach(b=>{b.disabled=true;const k=+b.dataset.i;if(k==cur.answer)b.classList.add("ok");else if(k==i)b.classList.add("bad")});
+ const ex=cur.explanations||[];
+ $("#pres").innerHTML=`<h2 style="color:var(${dropped?'--mid':ok?'--ok':i<0?'--mid':'--bad'})">${dropped?'Dropped by UPSC — not scored':ok?'✓ Correct':i<0?'Skipped':'✗ Wrong'} · ${sec}s</h2>${elimBad?'<p style="color:var(--bad)"><b>You eliminated the correct answer.</b> Check the reason below before trusting that elimination logic again.</p>':''}${elim.length&&!elimBad&&!dropped?`<p class="mute">Eliminations correct (${elim.length} struck).</p>`:''}<div id="exbox">${exHtml(cur)}</div>
+ <div class="mute">Why? (tap one${ok?', or skip if you knew it cold':''})</div><div class="chips" id="rch">${REASONS.map(r=>`<button class="chip">${r}</button>`).join("")}</div><input id="rnote" placeholder="Key fact to note (optional)"><div class="row" style="margin-top:8px"><button class="btn pri" id="rsave">Save & next</button></div>`;
+ const eb=$("#exbtn");if(eb)eb.onclick=()=>explain(cur);
+ let reason=ok?"":"Didn't know";$("#rch").onclick=e=>{if(e.target.tagName!="BUTTON")return;$("#rch").querySelectorAll(".chip").forEach(c=>c.classList.toggle("on",c==e.target));reason=e.target.textContent};
+ $("#rsave").onclick=async()=>{await save({qid:cur.id,subject:cur.subject,topic:cur.topic,year:cur.year,qno:cur.qno,chosen:i,result:dropped?"dropped":ok?"right":i<0?"skip":"wrong",reason,note:$("#rnote").value,sec,source:"app",conf,elim,elimBad});nextQ()}}
+// ---------- Log
+function renderLog(){const el=$("#v-log");if(el.dataset.init)return;el.dataset.init=1;
+ el.innerHTML=`<div class="card"><p class="mute">For questions solved from a book/PDF/website.</p><div class="row">${subjSel("ls")}<select id="lt"></select></div><div class="row" style="margin-top:8px"><input id="ly" type="number" placeholder="Year" min="1995" max="2026"><input id="lq" placeholder="Q no."></div><div class="chips" id="lr"><button class="chip on" data-r="right">✓ Right</button><button class="chip" data-r="wrong">✗ Wrong</button><button class="chip" data-r="skip">Left blank</button><button class="chip" data-r="guess">~ Guessed right</button></div><select id="lre"><option value="">Reason (if not clean ✓)</option>${REASONS.map(r=>`<option>${r}</option>`).join("")}</select><input id="ln" style="margin-top:8px" placeholder="Key fact / what to remember"><div class="row" style="margin-top:8px"><button class="btn pri" id="lsave">Save</button></div><div id="lmsg" class="mute"></div></div>`;
+ $("#lt").innerHTML=topicOpts($("#ls").value);$("#ls").onchange=()=>$("#lt").innerHTML=topicOpts($("#ls").value);
+ let r="right";$("#lr").onclick=e=>{if(!e.target.dataset.r)return;r=e.target.dataset.r;$("#lr").querySelectorAll(".chip").forEach(c=>c.classList.toggle("on",c==e.target))};
+ $("#lsave").onclick=async()=>{const y=$("#ly").value,q=$("#lq").value;await save({qid:`${y}-${q}`,subject:$("#ls").value,topic:$("#lt").value,year:+y||null,qno:q,result:r=="guess"?"right":r,reason:r=="guess"?"Guessed right":$("#lre").value,note:$("#ln").value,source:"offline"});$("#lq").value="";$("#ln").value="";$("#lmsg").textContent="Saved ✓ ("+todayCount()+" today)"}}
+// ---------- Review
+function renderReview(){const now=Date.now(),last={};att.forEach(a=>last[a.qid]=a);
+ const due=Object.values(last).filter(a=>(a.result!="right"||a.reason=="Guessed right")&&now-a.ts>=6*864e5).sort((a,b)=>a.ts-b.ts);
+ const later=Object.values(last).filter(a=>(a.result!="right"||a.reason=="Guessed right")&&now-a.ts<6*864e5).length;
+ $("#v-review").innerHTML=`<div class="card"><b>${due.length} due for re-attempt</b> <span class="mute">· ${later} more become due over the next week (7-day rule)</span><p class="mute">Re-attempt these without looking at notes. A ✓ clears them; a ✗ resets the clock.</p></div>`+due.map(a=>{const q=bank.find(b=>b.id==a.qid);return `<div class="card"><div class="mute">${esc(a.subject)} › ${esc(a.topic)} · ${esc(a.year)} Q${esc(a.qno)} · ${esc(a.reason||a.result)}</div>${a.note?`<div>${esc(a.note)}</div>`:''}<div class="row" style="margin-top:8px">${q?`<button class="btn pri" data-q="${esc(q.id)}">Re-attempt in app</button>`:`<button class="btn" data-ok="${esc(a.qid)}">✓ Got it now</button><button class="btn" data-no="${esc(a.qid)}">✗ Still wrong</button>`}</div></div>`}).join("");
+ $("#v-review").onclick=async e=>{const d=e.target.dataset;if(d.q){cur=bank.find(b=>b.id==d.q);$("#nav").querySelector('[data-v=practice]').click();const p=pool;pool=()=>[cur];nextQ();pool=p;return}
+  const id=d.ok||d.no;if(!id)return;const a=last[id];await save({...a,result:d.ok?"right":"wrong",reason:d.ok?"":a.reason,source:"review",reattempt:true});renderReview()}}
+// ---------- Dashboard
+function todayCount(){const d=new Date().toDateString();return att.filter(a=>new Date(a.ts).toDateString()==d).length}
+function net(list){const r=list.filter(a=>a.result=="right").length,w=list.filter(a=>a.result=="wrong").length;return list.length?(2*r-0.66*w)/list.length:0}
+function riskCard(){const rows=CONF.map(c=>{const l=att.filter(a=>a.conf==c&&a.result!="dropped");const r=l.filter(a=>a.result=="right"||a.result=="wrong");return{c,n:r.length,acc:r.length?Math.round(r.filter(a=>a.result=="right").length/r.length*100):0,net:net(r)}});
+ const el=att.filter(a=>a.elim&&a.elim.length),bad=el.filter(a=>a.elimBad).length,struck=el.reduce((s,a)=>s+a.elim.length,0);
+ const f=rows[1],g=rows[2];const adv=x=>x.n<15?'<span class="mute">need 15+ to judge</span>':x.net>0?'<b style="color:var(--ok)">Attempt these</b>':'<b style="color:var(--bad)">Leave these blank</b>';
+ return `<div class="card"><h2 style="margin-top:0">Risk-taking</h2><p class="mute">Net marks per attempt: +2 right, −0.66 wrong. Above 0 means attempting pays.</p><div style="overflow-x:auto"><table><tr><th>Conf.</th><th>n</th><th>Acc.</th><th>Net</th><th>Verdict</th></tr>${rows.map(x=>`<tr><td>${x.c}</td><td>${x.n}</td><td>${x.acc}%</td><td>${x.net.toFixed(2)}</td><td>${x.c=="Sure"?(x.n>=15&&x.acc<85?'<b style="color:var(--bad)">Overconfident — slow down</b>':'—'):adv(x)}</td></tr>`).join("")}</table></div>
+ <h2>Elimination</h2>${el.length?`<p>${struck} options struck across ${el.length} questions. You struck the <b>correct</b> answer ${bad} times (${Math.round(bad/el.length*100)}% of questions where you eliminated).</p><p class="mute">Under 5% is healthy. Higher means your “this is obviously wrong” instinct is misfiring — read those explanations closely.</p>`:'<p class="mute">Use ✕ on options before answering to start tracking this.</p>'}</div>`}
+function renderDash(){const by={},rs={};const all=att;att.filter(a=>a.result=='right'||a.result=='wrong').forEach(a=>{const s=by[a.subject]||(by[a.subject]={n:0,r:0,w:0,topics:{}});s.n++;a.result=="right"?s.r++:s.w++;const t=s.topics[a.topic]||(s.topics[a.topic]={n:0,r:0});t.n++;if(a.result=="right")t.r++;if(a.result!="right"&&a.reason)rs[a.reason]=(rs[a.reason]||0)+1});
+ const sc=att.filter(a=>a.result=='right'||a.result=='wrong'),right=sc.length?sc.filter(a=>a.result=="right").length:0,days=new Set(att.map(a=>new Date(a.ts).toDateString()));let streak=0;for(let d=new Date();days.has(d.toDateString());d.setDate(d.getDate()-1))streak++;
+ const est=sc.length?((right*2-sc.filter(a=>a.result=="wrong").length*0.66)/sc.length*100).toFixed(0):"–";
+ $("#v-dash").innerHTML=`<div class="stats"><div class="card"><div class="mute">Today</div><div class="big">${todayCount()}/25</div></div><div class="card"><div class="mute">Attempted (blank)</div><div class="big">${sc.length} <span class="mute" style="font-size:14px">(${att.filter(a=>a.result=="skip").length})</span></div></div><div class="card"><div class="mute">Accuracy</div><div class="big">${sc.length?Math.round(right/sc.length*100):0}%</div></div><div class="card"><div class="mute">Streak</div><div class="big">${streak}d</div></div><div class="card"><div class="mute">Marks / 100 attempted*</div><div class="big">${est}</div></div></div><p class="mute">*UPSC marking: +2 right, −0.66 wrong, 0 blank. Cut-off has been ~75–90/200, i.e. ~38–45 per 100 Qs on this scale.</p>
+ ${riskCard()}<div class="card"><h2 style="margin-top:0">By subject</h2><table><tr><th>Subject</th><th>Done</th><th>Acc.</th><th style="width:35%"></th></tr>${Object.entries(by).sort((a,b)=>b[1].n-a[1].n).map(([s,v])=>`<tr><td><details><summary>${esc(s)}</summary>${Object.entries(v.topics).map(([t,x])=>`<div class="mute">${esc(t)}: ${x.r}/${x.n}</div>`).join("")}</details></td><td>${v.n}</td><td>${Math.round(v.r/v.n*100)}%</td><td><div class="bar"><i style="width:${v.r/v.n*100}%"></i></div></td></tr>`).join("")||'<tr><td colspan=4 class="mute">No attempts yet.</td></tr>'}</table></div>
+ <div class="card"><h2 style="margin-top:0">Why you lose marks</h2>${Object.entries(rs).sort((a,b)=>b[1]-a[1]).map(([r,n])=>`<div>${esc(r)} — <b>${n}</b></div>`).join("")||'<div class="mute">Nothing yet.</div>'}</div>
+ <div class="card"><h2 style="margin-top:0">Explanations</h2><p><b id="excount">${bank.filter(q=>q.summary||q.explanation).length}</b> of ${bank.length} questions have a saved explanation.</p><p class="mute">“Generate all” writes the rest one by one using Claude and saves each permanently. Keep this tab open; it pauses on its own if Claude is busy and you can stop and resume anytime.</p>${sm?'<button class="btn pri" id="genall">Generate all missing</button> ':''}<span id="genmsg" class="mute"></span></div>
+ <div class="card"><h2 style="margin-top:0">Take it offline</h2><p class="mute">Downloads one file with every question, answer, explanation and your attempts (JSON). Ask Claude to turn it into a standalone offline app.</p><button class="btn" id="expall">Download everything</button> <label class="btn">Import attempts<input type="file" id="impf" accept=".json" hidden></label> <span id="expallm" class="mute"></span></div>
+ <div class="card"><h2 style="margin-top:0">Export to Google Sheets</h2><p class="mute">Downloads every attempt as CSV. In Sheets: File › Import › Upload › “Replace current sheet”.</p><button class="btn pri" id="exp">Download CSV</button> <span id="expm" class="mute"></span></div>`;
+ const ga=$("#genall");if(ga)ga.onclick=()=>{GEN.on?GEN.stop():GEN.start()};if(GEN.on&&ga)ga.textContent="Stop";
+ $("#expall").onclick=async()=>{const data=JSON.stringify({exported:new Date().toISOString(),questions:bank.map(q=>{const o={...q};return o}),attempts:att});try{if(dl)await dl.save({filename:"upsc_pyq_bank.json",data});else{const u=URL.createObjectURL(new Blob([data],{type:"application/json"}));const l=document.createElement("a");l.href=u;l.download="upsc_pyq_bank.json";l.click()}}catch(e){$("#expallm").textContent="Download cancelled."}};
+ $("#impf").onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const d=JSON.parse(await f.text());const have=new Set(att.map(a=>a.ts+"|"+a.qid));const add=(d.attempts||[]).filter(a=>a&&a.ts&&!have.has(a.ts+"|"+a.qid));
+  if(window.__importAttempts)window.__importAttempts(add);else for(const a of add){await db.collection("attempts").doc(a.ts+"-imp"+Math.random().toString(36).slice(2,6)).set(a)}
+  $("#expallm").textContent=`Imported ${add.length} new attempts.`}catch(err){$("#expallm").textContent="That file couldn't be read."}};
+ $("#exp").onclick=async()=>{const cols=["date","subject","topic","year","qno","result","reason","note","sec","source","reattempt"];const csv=[cols.join(",")].concat(att.map(a=>cols.map(c=>{let v=c=="date"?new Date(a.ts).toISOString().slice(0,16).replace("T"," "):a[c];return '"'+String(v??"").replace(/"/g,'""')+'"'}).join(","))).join("\n");
+  try{if(dl){await dl.save({filename:"pyq_log.csv",data:csv})}else{const u=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));const l=document.createElement("a");l.href=u;l.download="pyq_log.csv";l.click()}}catch(e){$("#expm").textContent="Download cancelled."}}}
+// ---------- Guide
+function renderGuide(){$("#v-guide").innerHTML=`<div class="card"><h2 style="margin-top:0">How to attempt</h2><ol><li><b>Timebox:</b> ~72 seconds a question (100 Qs / 120 min). Over 2 min = mark it and move on.</li><li><b>Read every statement word by word.</b> Underline “only”, “all”, “not”, “correct/incorrect”.</li><li><b>Eliminate first.</b> Kill extreme statements (“always”, “never”, “only”), then pick.</li><li><b>Risk rule:</b> 50:50 between two → attempt. Can’t eliminate even one → leave blank. One wrong costs a third of a right.</li><li><b>Don’t guess-and-forget:</b> if you got it right by guessing, tag it “Guessed right” — it comes back in Review like a ✗.</li></ol>
+<h2>How to log</h2><ol><li>Every question gets one reason if it wasn’t a clean ✓. The reasons drive your fixes:<br><span class="mute">Didn't know / Concept gap → read the topic. Elimination error / Overthought → practise technique. Misread / Silly → slow down on statements.</span></li><li>Write the <b>one fact</b> that would have made it easy. That line is your revision note.</li><li>Review tab every day: anything ✗ comes back after 7 days until you get it right cold.</li></ol>
+<h2>Daily minimum</h2><p>25 PYQs, topic-wise, highest-weight subjects first: Economy → Environment → Polity → Geography → S&T.</p></div>`}
+let MOCK=null;
+function renderMock(){const el=$("#v-mock");
+ if(MOCK&&!MOCK.done)return drawMock();
+ const done=new Set(att.map(a=>a.qid)),years=[...new Set(bank.map(q=>q.year))].sort();
+ el.innerHTML=`${MOCK&&MOCK.done?mockResult():''}<div class="card"><h2 style="margin-top:0">Start a mock</h2><p class="mute">100 questions · 120 minutes · UPSC marking · answers and explanations only after you submit. Questions you've never attempted come first.</p>
+ <div class="row"><select id="mke">${exams().map(x=>`<option>${esc(x)}</option>`).join("")}</select></div><div class="row" style="margin-top:8px"><select id="mk">${'<option value="mix">Mixed 100 (weighted like the real paper)</option>'+years.slice().reverse().map(y=>`<option value="${y}">Full UPSC ${y} paper</option>`).join("")}</select></div><div class="row" style="margin-top:8px"><button class="btn pri" id="mkgo">Start</button></div><p class="mute">${bank.filter(q=>!done.has(q.id)).length} questions you haven't attempted yet.</p></div>`;
+ $("#mkgo").onclick=()=>{const v=$("#mk").value,E=$("#mke").value,pb=bank.filter(q=>EX(q)==E);let qs;
+  if(v=="mix"){const fresh=pb.filter(q=>!done.has(q.id)&&q.answer!=null),src=fresh.length>=100?fresh:pb.filter(q=>q.answer!=null);const shares={};pb.forEach(q=>shares[q.subject]=(shares[q.subject]||0)+1);qs=[];
+   Object.keys(shares).forEach(s=>{const n=Math.round(shares[s]/pb.length*100);qs.push(...shuffle(src.filter(q=>q.subject==s)).slice(0,n))});qs=shuffle(qs).slice(0,100)}
+  else qs=bank.filter(q=>!q.custom&&q.year==+v).sort((a,b)=>a.qno-b.qno);
+  MOCK={qs,ans:{},flag:{},i:0,start:Date.now(),dur:120*60e3,done:false};try{localStorage.setItem("pyq_mock",JSON.stringify({ids:qs.map(q=>q.id),ans:{},flag:{},i:0,start:MOCK.start}))}catch(e){}drawMock()}}
+function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+function mockSave(){try{localStorage.setItem("pyq_mock",JSON.stringify({ids:MOCK.qs.map(q=>q.id),ans:MOCK.ans,flag:MOCK.flag,i:MOCK.i,start:MOCK.start}))}catch(e){}}
+function drawMock(){const M=MOCK,q=M.qs[M.i],L="abcd",left=Math.max(0,M.start+M.dur-Date.now());
+ $("#v-mock").innerHTML=`<div class="card"><div class="row" style="align-items:center"><b id="mclock">${fmt(left)}</b><span class="mute">${Object.keys(M.ans).length}/${M.qs.length} answered</span><button class="btn" id="msub">Submit</button></div>
+ <details style="margin-top:8px"><summary class="mute">Question grid</summary><div class="mgrid" style="margin-top:6px">${M.qs.map((x,k)=>`<button data-g="${k}" class="${M.ans[k]!=null?'ans':''} ${M.flag[k]?'fl':''} ${k==M.i?'cu':''}">${k+1}</button>`).join("")}</div></details></div>
+ <div class="card" id="mq"><div class="mute">Q${M.i+1} of ${M.qs.length} · ${q.custom?esc(q.source||EX(q)):"UPSC "+q.year+" Q"+q.qno}</div>${q.mode=="image"?`${q.note?`<div class="mute"><b>${esc(q.note)}</b></div>`:''}<canvas class="qc" style="width:100%;border:1px solid var(--line);border-radius:8px;background:#fff;margin:8px 0"></canvas>`:`<pre style="margin:8px 0">${esc(q.question)}</pre>`}
+ ${[0,1,2,3].map(k=>`<button class="opt" data-m="${k}" style="${M.ans[M.i]==k?'border-color:var(--acc);background:color-mix(in srgb,var(--acc) 18%,var(--bg))':''}">(${L[k]}) ${q.mode=="image"?"":esc(q.options[k])}</button>`).join("")}
+ <div class="row" style="margin-top:6px"><button class="btn" id="mprev">← Prev</button><button class="btn" id="mclr">Clear</button><button class="btn" id="mfl">${M.flag[M.i]?'Unflag':'Flag'}</button><button class="btn pri" id="mnext">Next →</button></div></div>`;
+ drawQ(q,"#mq");
+ $("#v-mock").querySelectorAll("[data-m]").forEach(b=>b.onclick=()=>{M.ans[M.i]=+b.dataset.m;mockSave();if(M.i<M.qs.length-1)M.i++;drawMock()});
+ $("#v-mock").querySelectorAll("[data-g]").forEach(b=>b.onclick=()=>{M.i=+b.dataset.g;drawMock()});
+ $("#mprev").onclick=()=>{if(M.i>0)M.i--;drawMock()};$("#mnext").onclick=()=>{if(M.i<M.qs.length-1)M.i++;drawMock()};
+ $("#mclr").onclick=()=>{delete M.ans[M.i];mockSave();drawMock()};$("#mfl").onclick=()=>{M.flag[M.i]=!M.flag[M.i];mockSave();drawMock()};
+ $("#msub").onclick=()=>{const un=M.qs.length-Object.keys(M.ans).length;if(un&&!M.confirm){M.confirm=1;$("#msub").textContent=`${un} blank — tap again to submit`;return}submitMock()};
+ clearInterval(M.tick);M.tick=setInterval(()=>{const l=M.start+M.dur-Date.now();const c=$("#mclock");if(c)c.textContent=fmt(Math.max(0,l));if(l<=0){clearInterval(M.tick);submitMock()}},1000)}
+function fmt(ms){const s=Math.floor(ms/1000);return `${Math.floor(s/3600)}:${String(Math.floor(s/60)%60).padStart(2,"0")}:${String(s%60).padStart(2,"0")}`}
+async function submitMock(){const M=MOCK;if(M.done)return;M.done=true;clearInterval(M.tick);try{localStorage.removeItem("pyq_mock")}catch(e){}
+ const mins=Math.round((Date.now()-M.start)/60000);M.mins=mins;
+ for(let k=0;k<M.qs.length;k++){const q=M.qs[k],a=M.ans[k];const res=q.answer==null?"dropped":a==null?"skip":a==q.answer?"right":"wrong";
+  await save({qid:q.id,subject:q.subject,topic:q.topic,year:q.year,qno:q.qno,chosen:a==null?-1:a,result:res,reason:res=="wrong"?"":"",note:"",source:"mock",mock:M.start})}
+ renderMock()}
+function mockResult(){const M=MOCK;let r=0,w=0,b=0;const bys={};M.qs.forEach((q,k)=>{if(q.answer==null)return;const a=M.ans[k];const s=bys[q.subject]||(bys[q.subject]={r:0,w:0,b:0});if(a==null){b++;s.b++}else if(a==q.answer){r++;s.r++}else{w++;s.w++}});
+ const sc=(2*r-0.66*w).toFixed(2);
+ return `<div class="card"><h2 style="margin-top:0">Mock result: ${sc} / ${2*M.qs.filter(q=>q.answer!=null).length}</h2><p>${r} right · ${w} wrong · ${b} blank · ${M.mins} min. Negative marks cost you ${(0.66*w).toFixed(2)}.</p><p class="mute">Cut-off has been ~75–90 for GS-I. Wrong answers are now in Review ✗ — go there and tag reasons.</p>
+ <table><tr><th>Subject</th><th>✓</th><th>✗</th><th>Blank</th><th>Marks</th></tr>${Object.entries(bys).map(([s,x])=>`<tr><td>${esc(s)}</td><td>${x.r}</td><td>${x.w}</td><td>${x.b}</td><td>${(2*x.r-0.66*x.w).toFixed(1)}</td></tr>`).join("")}</table>
+ <details><summary>See every question with answers</summary>${M.qs.map((q,k)=>`<p class="mute">Q${k+1} (UPSC ${q.year} Q${q.qno}) — you: ${M.ans[k]==null?'blank':"abcd"[M.ans[k]]}, key: ${q.answer==null?'dropped':"abcd"[q.answer]} ${M.ans[k]!=null&&M.ans[k]==q.answer?'✓':M.ans[k]==null?'':'✗'}${q.summary?' — '+esc(q.summary):''}</p>`).join("")}</details></div>`}
+function resumeMock(){try{const m=JSON.parse(localStorage.getItem("pyq_mock")||"null");if(!m||MOCK)return;const qs=m.ids.map(id=>bank.find(q=>q.id==id)).filter(Boolean);if(qs.length!=m.ids.length)return;MOCK={qs,ans:m.ans,flag:m.flag,i:m.i,start:m.start,dur:120*60e3,done:false}}catch(e){}}
+function renderAdd(){const el=$("#v-add");if(el.dataset.init){listCustom();return}el.dataset.init=1;
+ el.innerHTML=`<datalist id="dlex">${exams().concat(["EPFO APFC","EPFO EO/AO","Coaching mock"]).filter((x,i,a)=>a.indexOf(x)==i).map(x=>`<option value="${esc(x)}">`).join("")}</datalist><datalist id="dlsub">${[...new Set(Object.keys(SUBJ).concat(bank.map(q=>q.subject),["Accounting","Labour Laws","Industrial Relations","Insurance","Social Security","Computer Basics","General Science","Quantitative Aptitude","English","Reasoning"]))].map(x=>`<option value="${esc(x)}">`).join("")}</datalist>
+ <div class="card"><h2 style="margin-top:0">Add one question</h2>
+ <div class="row"><input id="ax" list="dlex" placeholder="Exam (e.g. EPFO APFC)"><input id="asr" placeholder="Source (e.g. APFC 2023, Vision mock 4)"></div>
+ <div class="row" style="margin-top:8px"><input id="as" list="dlsub" placeholder="Subject"><input id="at" placeholder="Topic"><input id="ay" type="number" placeholder="Year"></div>
+ <textarea id="aq" rows="4" style="margin-top:8px" placeholder="Question (statements on new lines)"></textarea>
+ ${[0,1,2,3].map(k=>`<div class="row" style="margin-top:6px;align-items:center"><label style="flex:0 0 auto;min-width:0"><input type="radio" name="aans" value="${k}"> (${"abcd"[k]})</label><input id="ao${k}" placeholder="Option ${"abcd"[k]}"></div>`).join("")}
+ <textarea id="ae" rows="3" style="margin-top:8px" placeholder="Explanation (optional)"></textarea><input id="ak" style="margin-top:6px" placeholder="One line to remember (optional)">
+ <div class="row" style="margin-top:8px"><button class="btn pri" id="asave">Save question</button></div><div id="amsg" class="mute"></div></div>
+ <div class="card"><h2 style="margin-top:0">Bulk import</h2><p class="mute">Paste rows from a spreadsheet (tab-separated) or CSV, one question per row, in this column order:<br><b>exam, source, subject, topic, year, question, a, b, c, d, answer (a/b/c/d), explanation, remember</b><br>A header row is fine — it's skipped.</p>
+ <textarea id="bulk" rows="6" placeholder="Paste here"></textarea><div class="row" style="margin-top:8px"><button class="btn" id="bprev">Check</button><button class="btn pri" id="bsave" disabled>Import</button></div><div id="bmsg" class="mute"></div></div>
+ <div class="card" id="clist"></div>`;
+ $("#asave").onclick=async()=>{const a=document.querySelector('input[name=aans]:checked');const q={exam:$("#ax").value.trim()||"Custom",source:$("#asr").value.trim(),subject:$("#as").value.trim()||"General",topic:$("#at").value.trim()||"General",year:+$("#ay").value||null,question:$("#aq").value.trim(),options:[0,1,2,3].map(k=>$("#ao"+k).value.trim()),answer:a?+a.value:null,summary:$("#ae").value.trim(),keyfact:$("#ak").value.trim()};
+  if(!q.question||q.options.some(o=>!o)||q.answer==null){$("#amsg").textContent="Need the question, all four options and the correct answer.";return}
+  await addCustom([q]);$("#amsg").textContent="Saved ✓";["aq","ao0","ao1","ao2","ao3","ae","ak"].forEach(i=>$("#"+i).value="");document.querySelectorAll('input[name=aans]').forEach(r=>r.checked=false)};
+ let parsed=[];$("#bprev").onclick=()=>{parsed=parseBulk($("#bulk").value);const bad=parsed.filter(q=>q.err);$("#bmsg").innerHTML=`${parsed.length-bad.length} ready to import${bad.length?`, ${bad.length} with problems:<br>`+bad.slice(0,8).map(q=>`Row ${q.row}: ${esc(q.err)}`).join("<br>"):"."}`;$("#bsave").disabled=!(parsed.length-bad.length)};
+ $("#bsave").onclick=async()=>{const ok=parsed.filter(q=>!q.err).map(({row,err,...q})=>q);$("#bsave").disabled=true;await addCustom(ok);$("#bmsg").textContent=`Imported ${ok.length} questions ✓`;$("#bulk").value=""};
+ listCustom()}
+function parseBulk(t){const lines=t.split(/\r?\n/).filter(l=>l.trim());const out=[];
+ lines.forEach((l,i)=>{const c=l.includes("\t")?l.split("\t"):csvRow(l);if(i==0&&/^\s*exam\s*$/i.test(c[0]))return;const [exam,source,subject,topic,year,question,a,b,cc,d,ans,ex,kf]=c.map(x=>(x||"").trim());
+  const q={row:i+1,exam:exam||"Custom",source,subject:subject||"General",topic:topic||"General",year:+year||null,question,options:[a,b,cc,d],answer:"abcd".indexOf((ans||"").toLowerCase().replace(/[()]/g,"")),summary:ex||"",keyfact:kf||""};
+  if(!question)q.err="no question";else if(q.options.some(o=>!o))q.err="needs four options";else if(q.answer<0)q.err="answer must be a, b, c or d";out.push(q)});return out}
+function csvRow(l){const r=[];let cur="",q=false;for(let i=0;i<l.length;i++){const ch=l[i];if(q){if(ch=='"'&&l[i+1]=='"'){cur+='"';i++}else if(ch=='"')q=false;else cur+=ch}else if(ch=='"')q=true;else if(ch==","){r.push(cur);cur=""}else cur+=ch}r.push(cur);return r}
+async function addCustom(list){for(const q of list){const id="c"+Date.now().toString(36)+Math.random().toString(36).slice(2,6);try{await db.collection("custom").doc(id).set({...q,added:Date.now(),mode:"text"})}catch(e){}}}
+function listCustom(){const el=$("#clist");if(!el)return;const by={};CUSTOM.forEach(q=>{const k=EX(q)+" › "+q.subject;by[k]=(by[k]||0)+1});
+ el.innerHTML=`<h2 style="margin-top:0">Your added questions (${CUSTOM.length})</h2>${Object.entries(by).map(([k,n])=>`<div>${esc(k)} — <b>${n}</b></div>`).join("")||'<p class="mute">None yet. Practice them from the Practice tab by choosing the exam at the top.</p>'}`}
+function render(v){if(bank.length)resumeMock();({practice:renderPractice,log:renderLog,review:renderReview,mock:renderMock,add:renderAdd,dash:renderDash,guide:renderGuide})[v||document.querySelector("#nav .on").dataset.v]()}
+// ---------- Data
+async function save(a){a.ts=Date.now();const id=a.ts+"-"+Math.random().toString(36).slice(2,6);if(db&&uid){try{await db.collection("attempts").doc(id).set(a);return}catch(e){$("#status").textContent="Save failed — kept on this device only."}}att.push(a);try{localStorage.setItem("pyq_local",JSON.stringify(att))}catch(e){}render()}
+render("practice");
+(async()=>{const timer=setTimeout(()=>{$("#status").textContent="Offline mode — data stays on this device."},10000);
+ try{dl=await claude.use("downloads")}catch(e){}
+ try{sm=await claude.use("sample")}catch(e){}
+ let user;try{[db,user]=await Promise.all([claude.use("db"),claude.use("user")])}catch(e){}
+ if(!db||!user){clearTimeout(timer);$("#status").textContent="Offline mode — data stays on this device.";try{att=JSON.parse(localStorage.getItem("pyq_local")||"[]")}catch(e){}render();return}
+ uid=await user.id();
+ db.collection("expl").onSnapshot(s=>{s.docs.forEach(d=>expl[d.id]=d.data());mergeExpl()},()=>{});
+ db.collection("custom").onSnapshot(s=>{CUSTOM=s.docs.map(d=>({...d.data(),id:d.id,custom:true}));bank=CORE.concat(CUSTOM);mergeExpl();render()},()=>{});
+ db.collection("bank").onSnapshot(s=>{CORE=[];s.docs.forEach(d=>{const v=d.data();(v.items||[v]).forEach(q=>CORE.push({...q,id:q.id||d.id}))});bank=CORE.concat(CUSTOM);mergeExpl();clearTimeout(timer);$("#status").textContent=`Synced · ${bank.length} questions in bank`;render()},()=>{$("#status").textContent="Could not load the question bank."});
+ db.collection("attempts").onSnapshot(s=>{att=s.docs.map(d=>d.data()).sort((a,b)=>a.ts-b.ts);clearTimeout(timer);render()},()=>{});
+})();
+</script>
+</body></html>
