@@ -244,7 +244,9 @@ function csvRow(l){const r=[];let cur="",q=false;for(let i=0;i<l.length;i++){con
 async function addCustom(list){for(const q of list){const id="c"+Date.now().toString(36)+Math.random().toString(36).slice(2,6);try{await db.collection("custom").doc(id).set({...q,added:Date.now(),mode:"text"})}catch(e){}}}
 function listCustom(){const el=$("#clist");if(!el)return;const by={};CUSTOM.forEach(q=>{const k=EX(q)+" › "+q.subject;by[k]=(by[k]||0)+1});
  el.innerHTML=`<h2 style="margin-top:0">Your added questions (${CUSTOM.length})</h2>${Object.entries(by).map(([k,n])=>`<div>${esc(k)} — <b>${n}</b></div>`).join("")||'<p class="mute">None yet. Practice them from the Practice tab by choosing the exam at the top.</p>'}`}
-function render(v){if(bank.length)resumeMock();({practice:renderPractice,log:renderLog,review:renderReview,mock:renderMock,add:renderAdd,dash:renderDash,guide:renderGuide})[v||document.querySelector("#nav .on").dataset.v]()}
+function regrade(){const by={};bank.forEach(q=>by[q.id]=q);att.forEach(a=>{const q=by[a.qid];if(!q||a.chosen==null||a.chosen<0||a.source=="offline")return;
+ const r=q.answer==null?"dropped":a.chosen==q.answer?"right":"wrong";if(r!=a.result){a.result=r;a.regraded=true;if(r=="right"&&a.reason&&a.reason!="Guessed right")a.reason=""}})}
+function render(v){regrade();if(bank.length)resumeMock();({practice:renderPractice,log:renderLog,review:renderReview,mock:renderMock,add:renderAdd,dash:renderDash,guide:renderGuide})[v||document.querySelector("#nav .on").dataset.v]()}
 // ---------- Data
 async function save(a){a.ts=Date.now();const id=a.ts+"-"+Math.random().toString(36).slice(2,6);if(db&&uid){try{await db.collection("attempts").doc(id).set(a);return}catch(e){$("#status").textContent="Save failed — kept on this device only."}}att.push(a);try{localStorage.setItem("pyq_local",JSON.stringify(att))}catch(e){}render()}
 render("practice");
