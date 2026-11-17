@@ -1,6 +1,6 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Prelims PYQ Lab</title><link rel="manifest" href="manifest.json"><meta name="theme-color" content="#2f5d50"><link rel="icon" href="icon-192.png"><link rel="apple-touch-icon" href="icon-192.png"></head><body><script>
 (function(){
-const APPV="17 Nov 11:27";
+const APPV="17 Nov 11:31";
 const K="pyq_attempts",P="pyq_pending",CQ="pyq_custom",CP="pyq_cpending",KF="pyq_keyfix",KP="pyq_kpending",NT="pyq_notes",NP="pyq_npending",C="pyq_sync";const subs={attempts:[],custom:[],keyfix:[],notes:[]};
 const get=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))??d}catch(e){return d}},put=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
 const store={attempts:[K,P],custom:[CQ,CP],keyfix:[KF,KP],notes:[NT,NP]};
@@ -93,13 +93,13 @@ function pool(){const e=$("#pe").value,s=$("#ps").value,t=$("#pt").value,m=$("#p
  if(m=="wrong")p=p.filter(q=>{const a=attemptsFor(q.id);return a.length&&a[a.length-1].result!="right"});
  if(m=="new"){const n=p.filter(q=>!attemptsFor(q.id).length);if(n.length)p=n}return p}
 function info(){$("#pinfo").textContent=bank.length?`${pool().length} questions in this filter · ${bank.length} in bank`:"Question bank is empty — Claude loads it from your UPSC papers. Use “Log offline” meanwhile."}
-const CONF=["Sure","50:50","Guess"];let ELIM=new Set(),CONFV="";
+const CONF=["Sure","50:50","Guess"];let ELIM=new Set(),CONFV="",CONFAUTO=false;
 function nextQ(){const p=pool();if(!p.length){$("#pq").innerHTML='<div class="card mute">Nothing here. Change the filter.</div>';return}
  cur=p[Math.floor(Math.random()*p.length)];t0=Date.now();const L="abcd";
  $("#pq").innerHTML=`<div class="card"><div class="mute">${esc(cur.subject)} › ${esc(cur.topic)} · ${cur.custom?esc((cur.source||EX(cur))+(cur.year&&!String(cur.source||"").includes(cur.year)?" "+cur.year:"")):"UPSC "+esc(cur.year)+" Q"+esc(cur.qno)+' · <span title="Text was OCR\'d from the scanned paper">scan text</span>'}</div>${cur.mode=="image"?`${cur.note?`<div class="mute"><b>${esc(cur.note)}</b></div>`:''}<canvas class="qc" role="img" aria-label="Question ${esc(cur.qno)} from the paper" style="width:100%;border:1px solid var(--line);border-radius:8px;background:#fff;margin:8px 0"></canvas>`:`<pre style="margin:8px 0">${esc(cur.question)}</pre>`}<div class="mute">Strike out what you can eliminate (✕), mark your confidence, then answer.</div>${(cur.options||["","","",""]).map((o,i)=>`<div class="orow"><button class="opt" data-i="${i}">(${L[i]}) ${cur.mode=="image"?"":esc(o)}</button><button class="xb" data-x="${i}" aria-label="Eliminate option ${L[i]}">✕</button></div>`).join("")}<div class="chips" id="conf"><span class="mute" style="align-self:center">Confidence:</span>${CONF.map(c=>`<button class="chip" data-c="${c}">${c}</button>`).join("")}</div>${cur.mode!="image"?`<details class="mute"><summary>View original scan</summary><canvas class="qc" style="width:100%;background:#fff;border-radius:8px"></canvas></details>`:""}${cur.unofficial?'<div class="mute">Answer key: unofficial (UPSC key not yet released).</div>':''}<div class="row" style="margin-top:6px"><button class="btn" id="pskip">Skip (would leave blank)</button></div><div id="pres"></div></div>`;
- ELIM=new Set();CONFV="";drawQ(cur);$("#pq").querySelectorAll(".opt").forEach(b=>b.onclick=()=>answer(+b.dataset.i));
- $("#pq").querySelectorAll(".xb").forEach(b=>b.onclick=()=>{const k=+b.dataset.x;ELIM.has(k)?ELIM.delete(k):ELIM.add(k);b.classList.toggle("on",ELIM.has(k));$(`#pq .opt[data-i="${k}"]`).classList.toggle("struck",ELIM.has(k))});
- $("#conf").onclick=e=>{const c=e.target.dataset.c;if(!c)return;CONFV=c;$("#conf").querySelectorAll(".chip").forEach(x=>x.classList.toggle("on",x==e.target))};$("#pskip").onclick=()=>answer(-1)}
+ ELIM=new Set();CONFV="";CONFAUTO=false;drawQ(cur);$("#pq").querySelectorAll(".opt").forEach(b=>b.onclick=()=>answer(+b.dataset.i));
+ $("#pq").querySelectorAll(".xb").forEach(b=>b.onclick=()=>{const k=+b.dataset.x;ELIM.has(k)?ELIM.delete(k):ELIM.add(k);b.classList.toggle("on",ELIM.has(k));$(`#pq .opt[data-i="${k}"]`).classList.toggle("struck",ELIM.has(k));const auto=ELIM.size==3?"Sure":ELIM.size==2?"50:50":"";if(auto||CONFAUTO){CONFV=auto;CONFAUTO=!!auto;$("#conf").querySelectorAll(".chip").forEach(x=>x.classList.toggle("on",x.dataset.c==auto))}});
+ $("#conf").onclick=e=>{const c=e.target.dataset.c;if(!c)return;CONFV=c;CONFAUTO=false;$("#conf").querySelectorAll(".chip").forEach(x=>x.classList.toggle("on",x==e.target))};$("#pskip").onclick=()=>answer(-1)}
 const SPR={};function sprite(n){return SPR[n]||(SPR[n]=new Promise((ok,no)=>{const i=new Image();i.onload=()=>ok(i);i.onerror=no;i.src="s/"+n}))}
 async function drawQ(q,sel="#pq"){if(!q.img)return;const [n,y,w,h]=q.img;try{const im=await sprite(n);document.querySelectorAll(sel+" canvas.qc").forEach(c=>{c.width=w;c.height=h;c.getContext("2d").drawImage(im,0,y,w,h,0,0,w,h)})}catch(e){}}
 function qBlob(){const c=document.querySelector("#pq canvas.qc");return c?new Promise(r=>c.toBlob(r,"image/jpeg",0.8)):null}
