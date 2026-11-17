@@ -1,6 +1,6 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Prelims PYQ Lab</title><link rel="manifest" href="manifest.json"><meta name="theme-color" content="#2f5d50"><link rel="icon" href="icon-192.png"><link rel="apple-touch-icon" href="icon-192.png"></head><body><script>
 (function(){
-const APPV="16 Nov 16:57";
+const APPV="17 Nov 10:56";
 const K="pyq_attempts",P="pyq_pending",CQ="pyq_custom",CP="pyq_cpending",KF="pyq_keyfix",KP="pyq_kpending",C="pyq_sync";const subs={attempts:[],custom:[],keyfix:[]};
 const get=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))??d}catch(e){return d}},put=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
 const store={attempts:[K,P],custom:[CQ,CP],keyfix:[KF,KP]};
@@ -84,7 +84,7 @@ function renderPractice(){
  if(!el.dataset.init){el.dataset.init=1;el.innerHTML=`<div class="card"><div class="row"><select id="pe"></select></div><div class="row" style="margin-top:8px"><select id="ps"></select><select id="pt"><option value="">All topics</option></select><select id="pm"><option value="new">Unattempted first</option><option value="all">Any</option><option value="wrong">Only my ✗</option></select></div><div class="row" style="margin-top:8px"><button class="btn pri" id="pgo">Next question</button></div><div id="pinfo" class="mute" style="margin-top:6px"></div></div><div id="pq"></div>`;
   const fillS=()=>{$("#ps").innerHTML='<option value="">All subjects</option>'+subjectsOf($("#pe").value).map(x=>`<option>${esc(x)}</option>`).join("");$("#pt").innerHTML='<option value="">All topics</option>';info()};
   $("#pe").onchange=fillS;$("#ps").onchange=()=>{$("#pt").innerHTML='<option value="">All topics</option>'+topicsOf($("#pe").value,$("#ps").value).map(t=>`<option>${esc(t)}</option>`).join("");info()};$("#pt").onchange=info;$("#pgo").onclick=nextQ}
- const pe=$("#pe");if(pe){const ex=exams(),v=pe.value;if(pe.options.length!=ex.length){pe.innerHTML=ex.map(x=>`<option>${esc(x)}</option>`).join("");pe.value=ex.includes(v)?v:ex[0];pe.onchange&&pe.onchange()}}
+ const pe=$("#pe");if(pe){const ex=exams(),v=pe.value;if(pe.options.length!=ex.length||pe.dataset.n!=String(bank.length)){pe.dataset.n=String(bank.length);const sv=$("#ps").value,tv=$("#pt").value;pe.innerHTML=ex.map(x=>`<option>${esc(x)}</option>`).join("");pe.value=ex.includes(v)?v:ex[0];pe.onchange&&pe.onchange();if(sv&&[...$("#ps").options].some(o=>o.value==sv)){$("#ps").value=sv;$("#ps").onchange();if(tv&&[...$("#pt").options].some(o=>o.value==tv))$("#pt").value=tv}info()}}
  info();
 }
 function pool(){const e=$("#pe").value,s=$("#ps").value,t=$("#pt").value,m=$("#pm").value;let p=bank.filter(q=>EX(q)==e&&(!s||q.subject==s)&&(!t||q.topic==t));
