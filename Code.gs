@@ -1,11 +1,12 @@
 // PYQ Lab sync backend. Paste into Extensions > Apps Script of a new Google Sheet.
 // 1) Change KEY below to any secret word.  2) Deploy > New deployment > Web app,
 //    Execute as: Me, Who has access: Anyone.  3) Copy the web app URL into the app's Sync settings.
-// Tabs: "attempts" (every answer you give), "questions" (questions you add), "keyfixes" (answer-key corrections).
+// Tabs: "attempts" (every answer you give), "questions" (questions you add), "keyfixes" (answer-key corrections), "notes" (★ must-remember notes).
 // You can also type questions straight into the "questions" tab: fill exam..remember, leave id and json blank.
 const KEY = 'CHANGE_ME';
 const ACOLS = ['id','date','subject','topic','year','qno','result','chosen','conf','eliminated','elimBad','reason','note','sec','source','json'];
 const FCOLS = ['id','date','answer','note','json'];
+const NCOLS = ['id','date','subject','topic','source','note','deleted','json'];
 const QCOLS = ['id','exam','source','subject','topic','year','question','a','b','c','d','answer','explanation','remember','json'];
 
 function sheet_(name, cols) {
@@ -35,7 +36,9 @@ function doGet(e) {
   });
   const fixes = [];
   rows_(sheet_('keyfixes', FCOLS)).forEach(r => { try { fixes.push(JSON.parse(r[FCOLS.indexOf('json')])); } catch (err) {} });
-  return out_({ok:true, attempts, questions, fixes});
+  const nmap = {};
+  rows_(sheet_('notes', NCOLS)).forEach(r => { try { const n = JSON.parse(r[NCOLS.indexOf('json')]); if (!nmap[n.id] || (n.ts || 0) > (nmap[n.id].ts || 0)) nmap[n.id] = n; } catch (err) {} });
+  return out_({ok:true, attempts, questions, fixes, notes: Object.values(nmap)});
 }
 
 function doPost(e) {
@@ -68,6 +71,12 @@ function doPost(e) {
       frows.push([f.id, new Date(f.ts || Date.now()), f.undo ? 'UNDO (official key)' : (f.answer == null ? 'dropped' : 'abcd'[f.answer]), f.note || '', JSON.stringify(f)]);
     });
     if (frows.length) fsh.getRange(fsh.getLastRow() + 1, 1, frows.length, FCOLS.length).setValues(frows);
-    return out_({ok:true, added: arows.length, addedQuestions: qrows.length, addedFixes: frows.length});
+    const nsh = sheet_('notes', NCOLS), nrows = [];
+    (body.notes || []).forEach(n => {
+      if (!n || !n.id) return;
+      nrows.push([n.id, new Date(n.ts || Date.now()), n.subject || '', n.topic || '', n.src || '', n.text || '', n.deleted ? 'YES' : '', JSON.stringify(n)]);
+    });
+    if (nrows.length) nsh.getRange(nsh.getLastRow() + 1, 1, nrows.length, NCOLS.length).setValues(nrows);
+    return out_({ok:true, addedNotes: nrows.length, added: arows.length, addedQuestions: qrows.length, addedFixes: frows.length});
   } finally { lock.releaseLock(); }
 }
