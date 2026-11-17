@@ -1,6 +1,6 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Prelims PYQ Lab</title><link rel="manifest" href="manifest.json"><meta name="theme-color" content="#2f5d50"><link rel="icon" href="icon-192.png"><link rel="apple-touch-icon" href="icon-192.png"></head><body><script>
 (function(){
-const APPV="17 Nov 11:33";
+const APPV="17 Nov 13:08";
 const K="pyq_attempts",P="pyq_pending",CQ="pyq_custom",CP="pyq_cpending",KF="pyq_keyfix",KP="pyq_kpending",NT="pyq_notes",NP="pyq_npending",C="pyq_sync";const subs={attempts:[],custom:[],keyfix:[],notes:[]};
 const get=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))??d}catch(e){return d}},put=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
 const store={attempts:[K,P],custom:[CQ,CP],keyfix:[KF,KP],notes:[NT,NP]};
@@ -62,6 +62,7 @@ table{width:100%;border-collapse:collapse;font-size:14px}td,th{padding:6px;borde
 <section id="v-mock" class="hid"></section>
 <section id="v-add" class="hid"></section>
 <section id="v-notes" class="hid"></section>
+<section id="v-hist" class="hid"></section>
 <section id="v-dash" class="hid"></section>
 <section id="v-guide" class="hid"></section>
 </main>
@@ -70,7 +71,7 @@ const SUBJ={Economy:["Macroeconomy","Budgeting","Taxation","RBI functions","RBI 
 const REASONS=["Didn't know","Concept gap","Elimination error","Misread statement","Silly / rushed","Overthought","Guessed right"];
 let FIX={},NOTES={},CORE=[],CUSTOM=[],expl={},db=null,sm=null,uid=null,bank=[],att=[],cur=null,t0=0,dl=null;
 const $=s=>document.querySelector(s),esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-const views=[["practice","Practice"],["log","Log offline"],["review","Review ✗"],["mock","Mock test"],["add","Add questions"],["notes","★ Notes"],["dash","Dashboard"],["guide","Guideline"]];
+const views=[["practice","Practice"],["log","Log offline"],["review","Review ✗"],["mock","Mock test"],["add","Add questions"],["notes","★ Notes"],["hist","History"],["dash","Dashboard"],["guide","Guideline"]];
 $("#nav").innerHTML=views.map(([k,l],i)=>`<button data-v="${k}" class="${i?'':'on'}">${l}</button>`).join("");
 $("#nav").onclick=e=>{const v=e.target.dataset.v;if(!v)return;document.querySelectorAll("#nav button").forEach(b=>b.classList.toggle("on",b.dataset.v==v));views.forEach(([k])=>$("#v-"+k).classList.toggle("hid",k!=v));render(v)};
 const EX=q=>q.exam||"UPSC Prelims";
@@ -271,18 +272,28 @@ document.addEventListener("selectionchange",()=>{const sel=window.getSelection()
  STARQ=box.closest("#v-mock")?null:cur;try{const r=sel.getRangeAt(0).getBoundingClientRect();b.style.left=Math.max(8,Math.min(window.innerWidth-110,r.left+r.width/2-45))+"px";b.style.top=Math.max(8,Math.min(window.innerHeight-56,(r.top>60?r.top-48:r.bottom+10)))+"px";b.style.display="block"}catch(e){}});
 document.addEventListener("click",async e=>{const t=e.target;if(t.dataset&&t.dataset.star!=null){if(await addNote(t.dataset.star,cur)){t.textContent="✓";t.disabled=true}}
  if(t.id=="exup"&&cur){t.disabled=true;t.textContent="Writing detailed notes… (~30 s)";try{await genExpl(cur);const x=$("#exbox");if(x)x.innerHTML=exHtml(cur)}catch(err){t.disabled=false;t.textContent=err&&err.code=="rate_limited"?"Busy — try again in a minute":"Make this explanation more detailed"}}});
-function renderNotes(){const el=$("#v-notes");const all=Object.entries(NOTES).filter(([id,n])=>!n.deleted).sort((a,b)=>b[1].ts-a[1].ts);
+function renderNotes(){const el=$("#v-notes");const byq={};bank.forEach(q=>byq[q.id]=q);
+ const fromAtt=att.filter(a=>a.note&&a.note.trim()).map(a=>{const q=byq[a.qid];return ["att:"+a.ts,{qid:a.qid,subject:a.subject||(q&&q.subject)||"General",topic:a.topic||"",src:q?(q.custom?(q.source||EX(q)):"UPSC "+q.year+" Q"+q.qno):(a.year?a.year+" Q"+a.qno:""),text:a.note.trim(),ts:a.ts,fromAtt:true}]});
+ const all=Object.entries(NOTES).filter(([id,n])=>!n.deleted).concat(fromAtt).sort((a,b)=>b[1].ts-a[1].ts);
  const subs=[...new Set(all.map(([,n])=>n.subject))].sort();const f=el.dataset.f||"",q=(el.dataset.q||"").toLowerCase();
  const list=all.filter(([,n])=>(!f||n.subject==f)&&(!q||n.text.toLowerCase().includes(q)||String(n.topic).toLowerCase().includes(q)));
- el.innerHTML=`<div class="card"><h2 style="margin-top:0">★ Must-remember notes (${all.length})</h2><p class="mute">Select any text in an explanation and tap “★ Save”, or tap ★ next to “Remember”. Synced to all your devices.</p>
+ el.innerHTML=`<div class="card"><h2 style="margin-top:0">★ Must-remember notes (${all.length})</h2><p class="mute">Select any text in an explanation and tap “★ Save”, or tap ★ next to “Remember”. Notes you typed in “Key fact to note” after answering appear here too. Synced to all your devices.</p>
  <div class="row"><select id="nf"><option value="">All subjects</option>${subs.map(x=>`<option ${x==f?"selected":""}>${esc(x)}</option>`).join("")}</select><input id="nq" placeholder="Search notes" value="${esc(el.dataset.q||"")}"></div>
  <div class="row" style="margin-top:8px"><button class="btn" id="nexp">Download as text</button></div></div>
- ${list.map(([id,n])=>`<div class="card" style="padding:10px 14px"><div class="mute" style="font-size:12px">${esc(n.subject)}${n.topic?" › "+esc(n.topic):""}${n.src?" · "+esc(n.src):""}</div><div style="margin:4px 0">${esc(n.text)}</div><div class="row"><button class="btn" data-ndel="${id}" style="flex:0 0 auto">Delete</button>${n.qid?`<button class="btn" data-nq="${esc(n.qid)}" style="flex:0 0 auto">Open question</button>`:''}</div></div>`).join("")||'<div class="card mute">No notes yet.</div>'}`;
+ ${list.map(([id,n])=>`<div class="card" style="padding:10px 14px"><div class="mute" style="font-size:12px">${esc(n.subject)}${n.topic?" › "+esc(n.topic):""}${n.src?" · "+esc(n.src):""}</div><div style="margin:4px 0">${esc(n.text)}</div><div class="row">${n.fromAtt?'<span class="mute" style="font-size:12px;align-self:center">from your attempt note</span>':`<button class="btn" data-ndel="${id}" style="flex:0 0 auto">Delete</button>`}${n.qid?`<button class="btn" data-nq="${esc(n.qid)}" style="flex:0 0 auto">Open question</button>`:''}</div></div>`).join("")||'<div class="card mute">No notes yet.</div>'}`;
  $("#nf").onchange=e=>{el.dataset.f=e.target.value;renderNotes()};$("#nq").oninput=e=>{el.dataset.q=e.target.value;clearTimeout(el._t);el._t=setTimeout(()=>{renderNotes();const i=$("#nq");i.focus();i.setSelectionRange(i.value.length,i.value.length)},300)};
  $("#nexp").onclick=async()=>{const txt=list.map(([,n])=>`[${n.subject}${n.topic?" › "+n.topic:""}${n.src?" · "+n.src:""}]\n${n.text}\n`).join("\n");try{if(dl)await dl.save({filename:"pyq_notes.txt",data:txt});else{const u=URL.createObjectURL(new Blob([txt],{type:"text/plain"}));const l=document.createElement("a");l.href=u;l.download="pyq_notes.txt";l.click()}}catch(e){}};
  el.querySelectorAll("[data-ndel]").forEach(b=>b.onclick=async()=>{const id=b.dataset.ndel;const n={...NOTES[id],deleted:true,ts:Date.now()};NOTES[id]=n;try{await db.collection("notes").doc(id).set(n)}catch(e){}renderNotes()});
  el.querySelectorAll("[data-nq]").forEach(b=>b.onclick=()=>{const q=bank.find(x=>x.id==b.dataset.nq);if(!q)return;$("#nav").querySelector('[data-v=practice]').click();const p=pool;pool=()=>[q];nextQ();pool=p})}
-function render(v){regrade();if(bank.length)resumeMock();({practice:renderPractice,log:renderLog,review:renderReview,mock:renderMock,add:renderAdd,notes:renderNotes,dash:renderDash,guide:renderGuide})[v||document.querySelector("#nav .on").dataset.v]()}
+function renderHist(){const el=$("#v-hist");const byq={};bank.forEach(q=>byq[q.id]=q);const f=el.dataset.f||"",r=el.dataset.r||"";
+ const subs=[...new Set(att.map(a=>a.subject).filter(Boolean))].sort();
+ const list=att.slice().reverse().filter(a=>(!f||a.subject==f)&&(!r||(r=="wrong"?a.result=="wrong":r=="right"?a.result=="right":r=="skip"?a.result=="skip":r=="guess"?(a.conf=="Guess"||a.reason=="Guessed right"):true)));
+ const ic=x=>x=="right"?'<b style="color:var(--ok)">✓</b>':x=="wrong"?'<b style="color:var(--bad)">✗</b>':x=="dropped"?'–':'○';
+ el.innerHTML=`<div class="card"><h2 style="margin-top:0">History (${att.length} attempts)</h2><div class="row"><select id="hf"><option value="">All subjects</option>${subs.map(x=>`<option ${x==f?"selected":""}>${esc(x)}</option>`).join("")}</select><select id="hr">${[["","All results"],["wrong","✗ Wrong"],["right","✓ Right"],["skip","Blank"],["guess","Guesses"]].map(([v,l])=>`<option value="${v}" ${v==r?"selected":""}>${l}</option>`).join("")}</select></div></div>
+ ${list.slice(0,300).map(a=>{const q=byq[a.qid];const d=new Date(a.ts);return `<div class="card" style="padding:10px 14px"><div class="row" style="align-items:center"><span style="flex:0 0 auto">${ic(a.result)}</span><span style="flex:3">${esc(a.subject||"")}${a.topic?" › "+esc(a.topic):""}<br><span class="mute" style="font-size:12px">${q?(q.custom?esc(q.source||EX(q)):"UPSC "+q.year+" Q"+q.qno):(a.year?esc(a.year)+" Q"+esc(a.qno):"")} · ${d.toLocaleDateString()} ${d.toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"})}${a.chosen>=0?" · you: ("+"abcd"[a.chosen]+")":""}${q&&q.answer!=null?" · key: ("+"abcd"[q.answer]+")":""}${a.conf?" · "+esc(a.conf):""}${a.reason?" · "+esc(a.reason):""}${a.source=="mock"?" · mock":""}</span></span>${q?`<button class="btn" data-hq="${esc(q.id)}" style="flex:0 0 auto">Open</button>`:''}</div>${a.note?`<div class="mute" style="margin-top:4px">📝 ${esc(a.note)}</div>`:''}</div>`}).join("")||'<div class="card mute">No attempts yet.</div>'}${list.length>300?'<p class="mute">Showing the latest 300. Use the filters to narrow down.</p>':''}`;
+ $("#hf").onchange=e=>{el.dataset.f=e.target.value;renderHist()};$("#hr").onchange=e=>{el.dataset.r=e.target.value;renderHist()};
+ el.querySelectorAll("[data-hq]").forEach(b=>b.onclick=()=>{const q=bank.find(x=>x.id==b.dataset.hq);if(!q)return;$("#nav").querySelector('[data-v=practice]').click();const p=pool;pool=()=>[q];nextQ();pool=p})}
+function render(v){regrade();if(bank.length)resumeMock();({practice:renderPractice,log:renderLog,review:renderReview,mock:renderMock,add:renderAdd,notes:renderNotes,hist:renderHist,dash:renderDash,guide:renderGuide})[v||document.querySelector("#nav .on").dataset.v]()}
 // ---------- Data
 async function save(a){a.ts=Date.now();const id=a.ts+"-"+Math.random().toString(36).slice(2,6);if(db&&uid){try{await db.collection("attempts").doc(id).set(a);return}catch(e){$("#status").textContent="Save failed — kept on this device only."}}att.push(a);try{localStorage.setItem("pyq_local",JSON.stringify(att))}catch(e){}render()}
 render("practice");
