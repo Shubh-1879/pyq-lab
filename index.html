@@ -1,6 +1,6 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Prelims PYQ Lab</title><link rel="manifest" href="manifest.json"><meta name="theme-color" content="#2f5d50"><link rel="icon" href="icon-192.png"><link rel="apple-touch-icon" href="icon-192.png"></head><body><script>
 (function(){
-const APPV="17 Nov 11:31";
+const APPV="17 Nov 11:33";
 const K="pyq_attempts",P="pyq_pending",CQ="pyq_custom",CP="pyq_cpending",KF="pyq_keyfix",KP="pyq_kpending",NT="pyq_notes",NP="pyq_npending",C="pyq_sync";const subs={attempts:[],custom:[],keyfix:[],notes:[]};
 const get=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))??d}catch(e){return d}},put=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
 const store={attempts:[K,P],custom:[CQ,CP],keyfix:[KF,KP],notes:[NT,NP]};
@@ -124,7 +124,7 @@ async function genExpl(q){let imgs=null;if(q.mode=="image"){const lim=await sm.l
 Return JSON only with these keys:
 "summary": 2-3 sentences — the answer and the core reason.
 "detail": a detailed paragraph (120-200 words) teaching the underlying concept, with the facts, dates, articles, bodies or data a student must know, and the elimination logic.
-"statements": for statement/pair-based questions, one entry per numbered statement or pair: "1 — Correct/Incorrect: reason"; otherwise [].
+"statements": for statement/pair/list-based questions, one entry per numbered statement, pair or item: "1 — Correct/Incorrect: reason", followed by 50-90 words of detailed facts about what that statement or item is about (definition, origin, dates, people, places, current status) — these items are often asked again in later years; otherwise [].
 "explanations": exactly 4 strings, why each of (a)-(d) is right or wrong for THIS question.
 "option_notes": exactly 4 strings, one per option (a)-(d), 50-90 words each: what that option IS — the facts a student must know about it on its own (definition, origin, dates, people, place, features, current status), even when the option is wrong, because UPSC often asks later questions about previous years' wrong options. For statement-number options like "1 and 2 only", give [] instead.
 "topic_notes": 200-350 words of detailed notes on the whole topic of the question — background, key facts, numbers, related institutions or schemes, and the other angles UPSC could ask on the same topic next time.
