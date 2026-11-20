@@ -1,11 +1,12 @@
 // PYQ Lab sync backend. Paste into Extensions > Apps Script of a new Google Sheet.
 // 1) Change KEY below to any secret word.  2) Deploy > New deployment > Web app,
 //    Execute as: Me, Who has access: Anyone.  3) Copy the web app URL into the app's Sync settings.
-// Tabs: "attempts" (every answer you give), "questions" (questions you add), "keyfixes" (answer-key corrections), "notes" (★ must-remember notes).
+// Tabs: "attempts" (every answer you give), "questions" (questions you add), "keyfixes" (answer-key corrections), "notes" (★ must-remember notes), "subjfix" (subjects you changed).
 // You can also type questions straight into the "questions" tab: fill exam..remember, leave id and json blank.
 const KEY = 'CHANGE_ME';
 const ACOLS = ['id','date','subject','topic','year','qno','result','chosen','conf','eliminated','elimBad','reason','note','sec','source','json'];
 const FCOLS = ['id','date','answer','note','json'];
+const SCOLS = ['id','date','subject','topic','json'];
 const NCOLS = ['id','date','subject','topic','source','note','deleted','json'];
 const QCOLS = ['id','exam','source','subject','topic','year','question','a','b','c','d','answer','explanation','remember','json'];
 
@@ -38,7 +39,9 @@ function doGet(e) {
   rows_(sheet_('keyfixes', FCOLS)).forEach(r => { try { fixes.push(JSON.parse(r[FCOLS.indexOf('json')])); } catch (err) {} });
   const nmap = {};
   rows_(sheet_('notes', NCOLS)).forEach(r => { try { const n = JSON.parse(r[NCOLS.indexOf('json')]); if (!nmap[n.id] || (n.ts || 0) > (nmap[n.id].ts || 0)) nmap[n.id] = n; } catch (err) {} });
-  return out_({ok:true, attempts, questions, fixes, notes: Object.values(nmap)});
+  const subjfix = [];
+  rows_(sheet_('subjfix', SCOLS)).forEach(r => { try { subjfix.push(JSON.parse(r[SCOLS.indexOf('json')])); } catch (err) {} });
+  return out_({ok:true, attempts, questions, fixes, notes: Object.values(nmap), subjfix});
 }
 
 function doPost(e) {
@@ -77,6 +80,12 @@ function doPost(e) {
       nrows.push([n.id, new Date(n.ts || Date.now()), n.subject || '', n.topic || '', n.src || '', n.text || '', n.deleted ? 'YES' : '', JSON.stringify(n)]);
     });
     if (nrows.length) nsh.getRange(nsh.getLastRow() + 1, 1, nrows.length, NCOLS.length).setValues(nrows);
-    return out_({ok:true, addedNotes: nrows.length, added: arows.length, addedQuestions: qrows.length, addedFixes: frows.length});
+    const ssh = sheet_('subjfix', SCOLS), srows = [];
+    (body.subjfix || []).forEach(f => {
+      if (!f || !f.id) return;
+      srows.push([f.id, new Date(f.ts || Date.now()), f.undo ? 'RESET' : (f.subject || ''), f.topic || '', JSON.stringify(f)]);
+    });
+    if (srows.length) ssh.getRange(ssh.getLastRow() + 1, 1, srows.length, SCOLS.length).setValues(srows);
+    return out_({ok:true, addedSubj: srows.length, addedNotes: nrows.length, added: arows.length, addedQuestions: qrows.length, addedFixes: frows.length});
   } finally { lock.releaseLock(); }
 }
